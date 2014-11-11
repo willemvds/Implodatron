@@ -1,55 +1,82 @@
 package implodatron
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"strings"
 )
 
-type PythonPackage struct {
-	Path string
-}
-
 type PythonFile struct {
-	Pypkg *PythonPackage
 	Path string
 }
 
 type ImportNode struct {
-	Parent *ImportNode
+	Parent   *ImportNode
 	Children []*ImportNode
-	PyFile *PythonFile
-	Line string
-	StartPos int
-	EndPos int
+	PyFile   *PythonFile
 }
 
-func Slurp(pyfile PythonFile) *ImportNode {
-	root := ImportNode{}
-	root.PyFile = &pyfile
-	for node := &root; node != nil; {
-		src, err := ioutil.ReadFile(node.PyFile.Path)
-		if err != nil {
-			log.Fatalf("%s: %v\n", node.PyFile.Path, err)	
+func PrintNode(n *ImportNode, level int) {
+	if len(n.Children) == 0 {
+		return
+	}
+	fmt.Printf("\n")
+	level++
+	fmt.Printf("%d:", level)
+	for i := range n.Children {
+		fmt.Printf(" %s", n.Children[i].PyFile.Path)
+		PrintNode(n.Children[i], level)
+	}
+}
+
+func (n *ImportNode) Print() {
+	level := 0
+	fmt.Printf("%d: %s", level, n.PyFile.Path)
+	PrintNode(n, level)
+}
+
+func (n *ImportNode) FindPath(p string) bool {
+	for node := n.Parent; node != nil; node = node.Parent {
+		if node.PyFile.Path == p {
+			return true
 		}
-		log.Printf("%s read: %d lines\n", node.PyFile.Path, len(src))
-		lines := strings.Split(string(src), "\n")
-		for _, line := range lines {
-			if strings.Index(line, "import") == 0 {
-				log.Println(line)
-				what := strings.TrimRight(line[7:], "\n")
-				childfile := PythonFile{Path:what+".py"}
-				child := Slurp(childfile)
-				node.Children = append(node.Children, child)
-				log.Println(what)
+	}
+	return false
+}
+
+func Slurp(fromFile PythonFile, intoNode *ImportNode) {
+	src, err := ioutil.ReadFile(fromFile.Path)
+	if err != nil {
+		log.Fatalf("%s: %v\n", fromFile, err)
+	}
+	log.Printf("%s read: %d lines\n", fromFile.Path, len(src))
+	lines := strings.Split(string(src), "\n")
+
+	for _, line := range lines {
+		if strings.Index(line, "import") == 0 {
+			log.Println(line)
+			what := strings.TrimRight(line[7:], "\n")
+			path := what + ".py"
+			pyfile := &PythonFile{
+				Path: path,
+			}
+			child := &ImportNode{
+				Parent: intoNode,
+				PyFile: pyfile,
+			}
+			intoNode.Children = append(intoNode.Children, child)
+			if !child.FindPath(path) {
+				Slurp(*pyfile, child)
 			}
 		}
-
-		for i := range node.Children {
-			// do stuff
-			log.Println(i)
-		}
-		node = nil
 	}
-	return &root
+}
+
+func BuildTree(pyfile PythonFile) *ImportNode {
+	root := &ImportNode{
+		PyFile: &pyfile,
+	}
+	Slurp(pyfile, root)
+	return root
 }
