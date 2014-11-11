@@ -17,6 +17,20 @@ type ImportNode struct {
 	PyFile   *PythonFile
 }
 
+func FindImport(line string) string {
+	if strings.Index(line, "import") == 0 {
+		what := strings.TrimRight(line[7:], "\n")
+		return what + ".py"
+	}
+	if strings.Index(line, "from") == 0 {
+		from := 5
+		to := strings.Index(line, "import")
+		what := line[from : to-1]
+		return what + ".py"
+	}
+	return ""
+}
+
 func PrintNode(n *ImportNode, level int) {
 	if len(n.Children) == 0 {
 		return
@@ -54,10 +68,9 @@ func Slurp(fromFile PythonFile, intoNode *ImportNode) {
 	lines := strings.Split(string(src), "\n")
 
 	for _, line := range lines {
-		if strings.Index(line, "import") == 0 {
-			log.Println(line)
-			what := strings.TrimRight(line[7:], "\n")
-			path := what + ".py"
+		path := FindImport(line)
+		if len(path) > 0 {
+			log.Println(line, "->", path)
 			pyfile := &PythonFile{
 				Path: path,
 			}

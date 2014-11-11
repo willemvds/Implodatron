@@ -1,3 +1,4 @@
+from car import *
 import car
 
 class Wheel():
