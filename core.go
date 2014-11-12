@@ -11,6 +11,13 @@ type PythonFile struct {
 	Path string
 }
 
+func (pf PythonFile) GetWD() string {
+	if idx := strings.LastIndex(pf.Path, "/"); idx != -1 {
+		return pf.Path[0 : idx+1]
+	}
+	return ""
+}
+
 type ImportNode struct {
 	Parent   *ImportNode
 	Children []*ImportNode
@@ -70,6 +77,7 @@ func Slurp(fromFile PythonFile, intoNode *ImportNode) {
 	for _, line := range lines {
 		path := FindImport(line)
 		if len(path) > 0 {
+			path = fromFile.GetWD() + path
 			log.Println(line, "->", path)
 			pyfile := &PythonFile{
 				Path: path,
