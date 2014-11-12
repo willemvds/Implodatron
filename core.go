@@ -20,13 +20,13 @@ type ImportNode struct {
 func FindImport(line string) string {
 	if strings.Index(line, "import") == 0 {
 		what := strings.TrimRight(line[7:], "\n")
-		return what + ".py"
+		return strings.Replace(what, ".", "/", -1) + ".py"
 	}
 	if strings.Index(line, "from") == 0 {
 		from := 5
 		to := strings.Index(line, "import")
 		what := line[from : to-1]
-		return what + ".py"
+		return strings.Replace(what, ".", "/", -1) + ".py"
 	}
 	return ""
 }

@@ -8,7 +8,7 @@ import (
 
 func main() {
 	mainpy := implodatron.PythonFile{}
-	mainpy.Path = "car.py"
+	mainpy.Path = "app.py"
 	log.Println(mainpy)
 	root := implodatron.BuildTree(mainpy)
 	root.Print()
