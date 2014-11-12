@@ -64,7 +64,7 @@ func Slurp(fromFile PythonFile, intoNode *ImportNode) {
 	if err != nil {
 		log.Fatalf("%s: %v\n", fromFile, err)
 	}
-	log.Printf("%s read: %d lines\n", fromFile.Path, len(src))
+	log.Printf("%s read: %d bytes\n", fromFile.Path, len(src))
 	lines := strings.Split(string(src), "\n")
 
 	for _, line := range lines {
