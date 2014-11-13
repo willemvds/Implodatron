@@ -1,9 +1,11 @@
 package implodatron
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -38,6 +40,18 @@ func FindImport(line string) string {
 	return ""
 }
 
+func Import(path string, cwd string) ([]byte, error) {
+	_, err := os.Stat(path)
+	if err != nil {
+		return ioutil.ReadFile(path)
+	}
+	_, err = os.Stat(cwd + path)
+	if err != nil {
+		return ioutil.ReadFile(cwd + path)
+	}
+	return []byte{}, errors.New("import not found")
+}
+
 func PrintNode(n *ImportNode, level int) {
 	if len(n.Children) == 0 {
 		return
@@ -69,7 +83,8 @@ func (n *ImportNode) FindPath(p string) bool {
 func Slurp(fromFile PythonFile, intoNode *ImportNode) {
 	src, err := ioutil.ReadFile(fromFile.Path)
 	if err != nil {
-		log.Fatalf("%s: %v\n", fromFile, err)
+		log.Printf("%s: %v\n", fromFile, err)
+		return
 	}
 	log.Printf("%s read: %d bytes\n", fromFile.Path, len(src))
 	lines := strings.Split(string(src), "\n")
