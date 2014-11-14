@@ -10,15 +10,17 @@ import (
 )
 
 type PythonFile struct {
-	Root string
-	Path string
+	Name string
+	Dir  string
+	//ImportLine string
 }
 
-func (pf PythonFile) GetWD() string {
-	if idx := strings.LastIndex(pf.Path, "/"); idx != -1 {
-		return pf.Path[0 : idx+1]
-	}
-	return ""
+func NewPythonFile(path string) *PythonFile {
+	pf := PythonFile{}
+	sidx := strings.LastIndex(path, "/")
+	pf.Name = path[sidx+1:]
+	pf.Dir = path[0 : sidx+1]
+	return &pf
 }
 
 type ImportNode struct {
@@ -41,14 +43,12 @@ func FindImport(line string) string {
 	return ""
 }
 
-func Import(partial string, paths []string) (string, []byte, error) {
+func Import(name string, paths []string) (string, []byte, error) {
 	var err error
 	for _, path := range paths {
-		log.Println(path)
-		log.Println(partial)
-		_, err = os.Stat(path + partial)
+		_, err = os.Stat(path + name)
 		if err == nil {
-			src, err := ioutil.ReadFile(path + partial)
+			src, err := ioutil.ReadFile(path + name)
 			return path, src, err
 		}
 	}
@@ -63,62 +63,62 @@ func PrintNode(n *ImportNode, level int) {
 	level++
 	fmt.Printf("%d:", level)
 	for i := range n.Children {
-		fmt.Printf(" %s", n.Children[i].PyFile.Path)
+		if n.Children[i].PyFile != nil {
+			fmt.Printf(" %s (%s)", n.Children[i].PyFile.Name, n.Children[i].PyFile.Dir)
+		}
 		PrintNode(n.Children[i], level)
 	}
 }
 
 func (n *ImportNode) Print() {
 	level := 0
-	fmt.Printf("%d: %s", level, n.PyFile.Path)
+	if n.PyFile != nil {
+		fmt.Printf("%d: %s", level, n.PyFile.Name)
+	}
 	PrintNode(n, level)
 }
 
-func (n *ImportNode) FindPath(p string) bool {
+func (n *ImportNode) FindImport(name string, dir string) bool {
 	for node := n.Parent; node != nil; node = node.Parent {
-		if node.PyFile.Path == p {
+		if node.PyFile.Name == name && node.PyFile.Dir == dir {
 			return true
 		}
 	}
 	return false
 }
 
-func Slurp(fromFile PythonFile, paths []string, intoNode *ImportNode) {
-	root, src, err := Import(fromFile.Path, paths) //ioutil.ReadFile(fromFile.Path)
+func Slurp(fromName string, paths []string, intoNode *ImportNode) {
+	path, src, err := Import(fromName, paths)
 	if err != nil {
-		log.Printf("%s: %v\n", fromFile, err)
+		log.Printf("%s: %v\n", fromName, err)
 		return
 	}
-	fromFile.Root = root
-	paths = append([]string{root}, paths...)
-	log.Printf("%s read: %d bytes\n", fromFile.Path, len(src))
-	lines := strings.Split(string(src), "\n")
+	fromFile := NewPythonFile(path + fromName)
+	intoNode.PyFile = fromFile
+	if intoNode.FindImport(fromFile.Name, fromFile.Dir) {
+		log.Println("\u001B[0;31mCIRCULAR DEPENDENCY STOP THE PLANET\u001B[0;m")
+		return
+	}
+	paths = append([]string{fromFile.Dir}, paths...)
 
+	log.Printf("%s read: %d bytes\n", fromFile.Name, len(src))
+	lines := strings.Split(string(src), "\n")
 	for _, line := range lines {
-		path := FindImport(line)
-		if len(path) > 0 {
+		partial := FindImport(line)
+		if len(partial) > 0 {
 			//path = fromFile.GetWD() + path
-			//paths = append(paths, fromFile.GetWD() + path)
-			log.Println(line, "->", path)
-			pyfile := &PythonFile{
-				Path: path,
-			}
+			log.Println(line, "->", partial)
 			child := &ImportNode{
 				Parent: intoNode,
-				PyFile: pyfile,
 			}
 			intoNode.Children = append(intoNode.Children, child)
-			if !child.FindPath(path) {
-				Slurp(*pyfile, paths, child)
-			}
+			Slurp(partial, paths, child)
 		}
 	}
 }
 
-func BuildTree(pyfile PythonFile, paths []string) *ImportNode {
-	root := &ImportNode{
-		PyFile: &pyfile,
-	}
-	Slurp(pyfile, paths, root)
+func BuildTree(name string, paths []string) *ImportNode {
+	root := &ImportNode{}
+	Slurp(name, paths, root)
 	return root
 }

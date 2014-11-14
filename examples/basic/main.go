@@ -28,14 +28,10 @@ func main() {
 		path = path[sidx:]
 	} else {
 		pathroot, _ = os.Getwd()
+		pathroot = pathroot + "/"
 	}
 
-	mainpy := implodatron.PythonFile{
-		Root: pathroot,
-		Path: path,
-	}
-	log.Println(mainpy)
-	root := implodatron.BuildTree(mainpy, []string{pathroot})
+	root := implodatron.BuildTree(path, []string{pathroot})
 	root.Print()
 	print("\n")
 }
