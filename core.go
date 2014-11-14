@@ -10,6 +10,7 @@ import (
 )
 
 type PythonFile struct {
+	Root string
 	Path string
 }
 
@@ -40,16 +41,18 @@ func FindImport(line string) string {
 	return ""
 }
 
-func Import(path string, cwd string) ([]byte, error) {
-	_, err := os.Stat(path)
-	if err != nil {
-		return ioutil.ReadFile(path)
+func Import(partial string, paths []string) (string, []byte, error) {
+	var err error
+	for _, path := range paths {
+		log.Println(path)
+		log.Println(partial)
+		_, err = os.Stat(path + partial)
+		if err == nil {
+			src, err := ioutil.ReadFile(path + partial)
+			return path, src, err
+		}
 	}
-	_, err = os.Stat(cwd + path)
-	if err != nil {
-		return ioutil.ReadFile(cwd + path)
-	}
-	return []byte{}, errors.New("import not found")
+	return "", []byte{}, errors.New("import not found")
 }
 
 func PrintNode(n *ImportNode, level int) {
@@ -80,19 +83,22 @@ func (n *ImportNode) FindPath(p string) bool {
 	return false
 }
 
-func Slurp(fromFile PythonFile, intoNode *ImportNode) {
-	src, err := ioutil.ReadFile(fromFile.Path)
+func Slurp(fromFile PythonFile, paths []string, intoNode *ImportNode) {
+	root, src, err := Import(fromFile.Path, paths) //ioutil.ReadFile(fromFile.Path)
 	if err != nil {
 		log.Printf("%s: %v\n", fromFile, err)
 		return
 	}
+	fromFile.Root = root
+	paths = append([]string{root}, paths...)
 	log.Printf("%s read: %d bytes\n", fromFile.Path, len(src))
 	lines := strings.Split(string(src), "\n")
 
 	for _, line := range lines {
 		path := FindImport(line)
 		if len(path) > 0 {
-			path = fromFile.GetWD() + path
+			//path = fromFile.GetWD() + path
+			//paths = append(paths, fromFile.GetWD() + path)
 			log.Println(line, "->", path)
 			pyfile := &PythonFile{
 				Path: path,
@@ -103,16 +109,16 @@ func Slurp(fromFile PythonFile, intoNode *ImportNode) {
 			}
 			intoNode.Children = append(intoNode.Children, child)
 			if !child.FindPath(path) {
-				Slurp(*pyfile, child)
+				Slurp(*pyfile, paths, child)
 			}
 		}
 	}
 }
 
-func BuildTree(pyfile PythonFile) *ImportNode {
+func BuildTree(pyfile PythonFile, paths []string) *ImportNode {
 	root := &ImportNode{
 		PyFile: &pyfile,
 	}
-	Slurp(pyfile, root)
+	Slurp(pyfile, paths, root)
 	return root
 }
