@@ -37,8 +37,8 @@ func main() {
 			pathroot = pathroot + "/"
 		}
 
-		root := implodatron.BuildTree(path, []string{pathroot})
-		root.Print()
+		implodatron.BuildTree(path, []string{pathroot})
+		//root.Print()
 		print("\n")
 	}
 }

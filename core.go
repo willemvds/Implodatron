@@ -31,7 +31,7 @@ type ImportNode struct {
 
 func FindImport(line string) string {
 	if strings.Index(line, "import") == 0 {
-		what := strings.TrimRight(line[7:], "\n")
+		what := strings.TrimRight(line[7:], " \n")
 		return strings.Replace(what, ".", "/", -1) + ".py"
 	}
 	if strings.Index(line, "from") == 0 {
@@ -90,7 +90,7 @@ func (n *ImportNode) FindImport(name string, dir string) bool {
 func Slurp(fromName string, paths []string, intoNode *ImportNode) {
 	path, src, err := Import(fromName, paths)
 	if err != nil {
-		log.Printf("%s: %v\n", fromName, err)
+		//log.Printf("%s: %v\n", fromName, err)
 		return
 	}
 	fromFile := NewPythonFile(path + fromName)
@@ -109,12 +109,12 @@ func Slurp(fromName string, paths []string, intoNode *ImportNode) {
 	}
 	paths = append([]string{fromFile.Dir}, paths...)
 
-	log.Printf("%s read: %d bytes\n", fromFile.Name, len(src))
+	//log.Printf("%s read: %d bytes\n", fromFile.Name, len(src))
 	lines := strings.Split(string(src), "\n")
 	for _, line := range lines {
 		partial := FindImport(line)
 		if len(partial) > 0 {
-			log.Println(line, "->", partial)
+			//log.Println(line, "->", partial)
 			child := &ImportNode{
 				Parent: intoNode,
 			}
