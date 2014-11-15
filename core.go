@@ -12,7 +12,6 @@ import (
 type PythonFile struct {
 	Name string
 	Dir  string
-	//ImportLine string
 }
 
 func NewPythonFile(path string) *PythonFile {
@@ -24,9 +23,10 @@ func NewPythonFile(path string) *PythonFile {
 }
 
 type ImportNode struct {
-	Parent   *ImportNode
-	Children []*ImportNode
-	PyFile   *PythonFile
+	Parent     *ImportNode
+	Children   []*ImportNode
+	PyFile     *PythonFile
+	ImportLine string
 }
 
 func FindImport(line string) string {
@@ -95,8 +95,16 @@ func Slurp(fromName string, paths []string, intoNode *ImportNode) {
 	}
 	fromFile := NewPythonFile(path + fromName)
 	intoNode.PyFile = fromFile
+	intoNode.ImportLine = fromName
 	if intoNode.FindImport(fromFile.Name, fromFile.Dir) {
-		log.Println("\u001B[0;31mCIRCULAR DEPENDENCY STOP THE PLANET\u001B[0;m")
+		log.Println("\u001B[0;31mCIRCULAR IMPORT; STOP THE PLANET\u001B[0;m")
+		for n := intoNode; n != nil; n = n.Parent {
+			fmt.Printf("%s", n.ImportLine)
+			if n.Parent != nil {
+				fmt.Printf(" <- ")
+			}
+		}
+		fmt.Println()
 		return
 	}
 	paths = append([]string{fromFile.Dir}, paths...)
@@ -106,7 +114,6 @@ func Slurp(fromName string, paths []string, intoNode *ImportNode) {
 	for _, line := range lines {
 		partial := FindImport(line)
 		if len(partial) > 0 {
-			//path = fromFile.GetWD() + path
 			log.Println(line, "->", partial)
 			child := &ImportNode{
 				Parent: intoNode,
