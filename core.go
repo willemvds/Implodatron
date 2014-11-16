@@ -103,9 +103,9 @@ func Slurp(fromName string, paths []string, intoNode *ImportNode) {
 	if intoNode.FindImport(fromFile.Name, fromFile.Dir) {
 		log.Println("\u001B[0;31mCIRCULAR IMPORT; STOP THE PLANET\u001B[0;m")
 		for n := intoNode; n != nil; n = n.Parent {
-			fmt.Printf("%s", n.ImportLine)
+			fmt.Printf("\u001B[0;36m%s\u001B[0;m", n.ImportLine)
 			if n.Parent != nil {
-				fmt.Printf(" <- ")
+				fmt.Printf(" \u001B[1;32m<-\u001B[0;m ")
 			}
 		}
 		fmt.Println()
