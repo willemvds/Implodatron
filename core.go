@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+var LogLevel int = 0
+
 type PythonFile struct {
 	Name string
 	Dir  string
@@ -90,7 +92,9 @@ func (n *ImportNode) FindImport(name string, dir string) bool {
 func Slurp(fromName string, paths []string, intoNode *ImportNode) {
 	path, src, err := Import(fromName, paths)
 	if err != nil {
-		//log.Printf("%s: %v\n", fromName, err)
+		if LogLevel > 0 {
+			log.Printf("%s: %v\n", fromName, err)
+		}
 		return
 	}
 	fromFile := NewPythonFile(path + fromName)
@@ -109,12 +113,16 @@ func Slurp(fromName string, paths []string, intoNode *ImportNode) {
 	}
 	paths = append([]string{fromFile.Dir}, paths...)
 
-	//log.Printf("%s read: %d bytes\n", fromFile.Name, len(src))
+	if LogLevel > 0 {
+		log.Printf("%s read: %d bytes\n", fromFile.Name, len(src))
+	}
 	lines := strings.Split(string(src), "\n")
 	for _, line := range lines {
 		partial := FindImport(line)
 		if len(partial) > 0 {
-			//log.Println(line, "->", partial)
+			if LogLevel > 0 {
+				log.Println(line, "->", partial)
+			}
 			child := &ImportNode{
 				Parent: intoNode,
 			}

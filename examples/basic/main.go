@@ -9,13 +9,12 @@ import (
 	"github.com/willemvds/Implodatron"
 )
 
-/*
-var path string
+//var path string
+var verbose bool
 
 func init() {
-	flag.StringVar(&path, "path", "", "path to 'main' file")
+	flag.BoolVar(&verbose, "v", false, "verbose")
 }
-*/
 
 func main() {
 	flag.Parse()
@@ -24,6 +23,9 @@ func main() {
 			log.Fatalf("Usage: basic -path <myapp.py>")
 		}
 	*/
+	if verbose {
+		implodatron.LogLevel = 1
+	}
 
 	for _, path := range flag.Args() {
 		var pathroot string
